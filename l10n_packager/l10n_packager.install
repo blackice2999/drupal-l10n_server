@@ -1,0 +1,134 @@
+<?php
+// $Id: l10n_packager.install,v 1.1.2.1.2.3 2010/06/25 14:55:53 goba Exp $
+
+/**
+ * @file
+ *   Localization packager for localization server installer.
+ */
+
+/**
+ * Implementation of hook_schema().
+ */
+function l10n_packager_schema() {
+  $schema['l10n_packager_release'] = array(
+    'description' => 'Information about packaging for each release.',
+    'fields' => array(
+      'rid' => array(
+        'description' => 'Reference to {l10n_server_release}.rid',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'Packaging status for this release. One of L10N_PACKAGER_DISABLED, L10N_PACKAGER_ACTIVE and L10N_PACKAGER_ERROR.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default value' => 1,
+        'disp-width' => '11'
+      ),
+      'checked' => array(
+        'description' => 'Unix timestamp of last time this release was checked.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'disp-width' => '11'
+      ),
+      'updated' => array(
+        'description' => 'Unix timestamp of last time files for this release were updated.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'disp-width' => '11'
+      ),
+    ),
+    'primary key' => array('rid'),
+  );
+  $schema['l10n_packager_file'] = array(
+    'description' => 'Links releases and languages to files.',
+    'fields' => array(
+      'drid' => array(
+        'description' => 'Internal numeric identifier for a release file.',
+        'type' => 'serial',
+        'not null' => TRUE,
+      ),
+      'rid' => array(
+        'description' => 'Reference to {l10n_server_release}.rid',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'language' => array(
+        'description' => 'Reference to the {languages}.language for the translation package.',
+        'type' => 'varchar',
+        'length' => '12',
+        'not null' => TRUE
+      ),
+      'fid' => array(
+        'description' => 'Reference to {files}.fid.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'checked' => array(
+        'description' => 'Unix timestamp of last time translation for this language was checked.',
+        'type' => 'int',
+        'not null' => FALSE,
+        'disp-width' => '11'
+      ),
+    ),
+    'primary key' => array('drid'),
+  );
+  $schema['cache_l10n_packager'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_l10n_packager']['description'] = 'Cache table for localization packager containing processed status data keyed by project URI.';
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install()
+ */
+function l10n_packager_install() {
+  drupal_install_schema('l10n_packager');
+
+  // Set up blocks for this module.
+  $theme_key = variable_get('theme_default', 'garland');
+  $blocks = array(-8 => 'download');
+  $module = 'l10n_packager';
+  foreach ($blocks as $weight => $delta) {
+    // Update all instances of this block even if we just added it.
+    if (!db_affected_rows(db_query("UPDATE {blocks} SET cache = -1, status = 1, weight = %d WHERE module = '%s' AND delta = '%s'", $weight, $module, $delta))) {
+      db_query("INSERT INTO {blocks} (module, delta, theme, status, weight, region, cache) VALUES ('%s', '%s', '%s', 1, %d, 'right', -1)", $module, $delta, $theme_key, $weight);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_uninstall()
+ */
+function l10n_packager_uninstall() {
+  drupal_uninstall_schema('l10n_packager');
+}
+
+/**
+ * Add cache_l10n_packager table to cache downloads information.
+ */
+function l10n_packager_update_6001() {
+  $ret = array();
+  $table = drupal_get_schema_unprocessed('system', 'cache');
+  $table['description'] = 'Cache table for localization packager containing processed status data keyed by project URI.';
+  db_create_table($ret, 'cache_l10n_packager', $table);
+  return $ret;
+}
+
+/**
+ * Set up blocks that were newly introduced.
+ */
+function l10n_packager_update_6002() {
+  $theme_key = variable_get('theme_default', 'garland');
+  $blocks = array(-8 => 'download');
+  $module = 'l10n_packager';
+  foreach ($blocks as $weight => $delta) {
+    // Update all instances of this block even if we just added it.
+    if (!db_affected_rows(db_query("UPDATE {blocks} SET cache = -1, status = 1, weight = %d WHERE module = '%s' AND delta = '%s'", $weight, $module, $delta))) {
+      db_query("INSERT INTO {blocks} (module, delta, theme, status, weight, region, cache) VALUES ('%s', '%s', '%s', 1, %d, 'right', -1)", $module, $delta, $theme_key, $weight);
+    }
+  }
+  return array();
+}

@@ -1,0 +1,6 @@
+; $Id: l10n_packager.info,v 1.1.2.3.2.1 2010/05/18 10:41:42 goba Exp $
+name = "Localization packager"
+description = "Translation packaging tools for the localization server"
+package = "Localization server"
+dependencies[] = l10n_community
+core = 6.x

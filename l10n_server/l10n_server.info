@@ -1,0 +1,7 @@
+; $Id: l10n_server.info,v 1.1.2.1 2010/03/24 11:40:43 goba Exp $
+name = Localization server
+description = Base backend module for localization server
+package = "Localization server"
+dependencies[] = locale
+core = 6.x
+php = 5

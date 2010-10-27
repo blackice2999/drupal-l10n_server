@@ -1,0 +1,6 @@
+; $Id: l10n_gettext.info,v 1.1.2.1 2010/05/05 15:08:45 goba Exp $
+name = "Localization server for Gettext files"
+description = Manages translatable strings with Gettext standard input/output.
+dependencies[] = l10n_server
+package = "Localization server connectors"
+core = 6.x
