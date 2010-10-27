@@ -1,0 +1,62 @@
+diff --git connectors/l10n_drupal/l10n_drupal.files.inc connectors/l10n_drupal/l10n_drupal.files.inc
+index c079cc3..4a1e983 100644
+--- connectors/l10n_drupal/l10n_drupal.files.inc
++++ connectors/l10n_drupal/l10n_drupal.files.inc
+@@ -19,8 +19,18 @@ function l10n_drupal_files_scan($source = NULL, $automated = FALSE) {
+     drupal_set_message(t('The configured directory (%workdir) cannot be found. <a href="@configure">Check your configuration</a>.', array('%workdir' => $workdir, '@configure' => url('admin/l10n_server/connectors/config/l10n_drupal/files'))));
+   }
+   else {
++    // define a list of allowed extensions, we will use it later on file_scan_directory
++    // and further regular expression buildung processing. Thanks to EugenMayer
++    $allowed_file_extensions = array('.tar.gz', '.tgz');
++    // build the regular expression
++    foreach($allowed_file_extensions as $key => $extension) {
++      // escape the file extensions for later regular expression usage
++      $allowed_file_extensions[$key] = preg_quote($extension);
++    }
++    $file_extension_pattern = '(' . implode('|', $allowed_file_extensions) . ')$';
++
+     // Packages are always .tar.gz files.
+-    $files = file_scan_directory($workdir, '.tar.gz$');
++    $files = file_scan_directory($workdir, $file_extension_pattern);
+     if (count($files)) {
+       foreach ($files as $path => $file) {
+ 
+@@ -30,9 +40,26 @@ function l10n_drupal_files_scan($source = NULL, $automated = FALSE) {
+         }
+ 
+         // Get rid of $workdir prefix on file names, eg.
+-        // files/Drupal/drupal-4.6.7.tar.gz or
++        // drupal-6.x-6.19.tar.gz
++        // Drupal/drupal-4.6.7.tar.gz or
+         // files/Ubercart/ubercart-5.x-1.0-alpha8.tar.gz.
+-        $path = $package = trim(preg_replace('!(^'. preg_quote($workdir, '!') .')(.+)\.tar\.gz!', '\2', $path), '/');
++
++        // split the filename into parts to $filename_splitted
++        // [0] = the full string
++        // [1] = the subdirectory and filename with extension
++        // [1] = the subdirectory and filename without extension
++        // [2] = the extension .tar.gz or .tgz
++        $file_splitted = array(); // ensure to be a array....
++        // the regular expression pattern (i put it in a var because i can better handle it with dpm for debugging, move if you want...)
++        $file_split_pattern = '!^'. preg_quote($workdir, '!') .'((.+)'. $file_extension_pattern .')!';
++        preg_match( $file_split_pattern, $path, $file_splitted );
++        // put the result in vars for better handling
++        list($file_fullpath, $file_subpath_ext, $file_subpath, $file_extension) = $file_splitted;
++
++        // redefine the path to subpath without slash at beginning
++        $path = trim($file_subpath, '/');
++        // same on package
++        $package = trim($file_subpath, '/');
+ 
+         $project_title = '';
+         if (strpos($path, '/')) {
+@@ -46,7 +73,7 @@ function l10n_drupal_files_scan($source = NULL, $automated = FALSE) {
+           // eg. drupal-4.6.7 or ubercart-5.x-1.0-alpha8.
+           list($project_uri, $release_version) = explode('-', $package, 2);
+ 
+-          l10n_drupal_save_data($project_uri, ($project_title ? $project_title : $project_uri), $release_version, $path .'.tar.gz', filemtime($file->filename));
++          l10n_drupal_save_data($project_uri, ($project_title ? $project_title : $project_uri), $release_version, trim($file_subpath_ext, '/'), filemtime($file->filename));
+         }
+         else {
+           // File name not formatted properly.
